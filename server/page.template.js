@@ -1,3 +1,5 @@
+module.exports = (vitreum) => {
+	return `<!-- Doctype HTML5 -->
 <!DOCTYPE html>
 <html lang="en" xml:lang="en" xmlns= "http://www.w3.org/1999/xhtml">
 	<head>
@@ -5,14 +7,13 @@
 		<script>global=window</script>
 		<link href="//netdna.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css" rel="stylesheet" />
 		<link href='http://fonts.googleapis.com/css?family=Lato&subset=latin,latin-ext' rel='stylesheet' type='text/css'>
-		{{= vitreum.css}}
+		${vitreum.head}
 		<title>gifbin.</title>
 		<link rel="icon" href="/assets/gifbin/gifbin.ico" type="image/x-icon">
 	</head>
 	<body>
-		<div id="reactContainer">{{=vitreum.component}}</div>
+		<div id="reactContainer">${vitreum.body}</div>
 	</body>
-	{{= vitreum.libs}}
-	{{= vitreum.js}}
-	{{= vitreum.reactRender}}
-</html>
+	${vitreum.js}
+</html>`;
+};

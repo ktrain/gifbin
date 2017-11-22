@@ -1,6 +1,7 @@
 require('app-module-path').addPath('./shared');
 
-var vitreumRender = require('vitreum/render')
+var render = require('vitreum/steps/render')
+var pageTemplate = require('./server/page.template.js');
 var express = require("express");
 var bodyParser = require('body-parser');
 var cookieParser = require('cookie-parser');
@@ -10,8 +11,6 @@ app.use(bodyParser.json());
 app.use(cookieParser());
 
 
-//require('node-jsx').install();
-
 var apigen = require('./server/apigen.js');
 apigen.use(app);
 
@@ -20,15 +19,6 @@ process.env.ADMIN_USER = process.env.ADMIN_USER || 'john';
 process.env.ADMIN_PASS = process.env.ADMIN_PASS || 'secret';
 process.env.ADMIN_KEY  = process.env.ADMIN_KEY  || 'admin';
 
-
-
-//Mongoose
-var mongoose = require('mongoose');
-var mongoUri = process.env.MONGOLAB_URI || process.env.MONGOHQ_URL || process.env.MONGODB_URI || 'mongodb://localhost/gifbin';
-mongoose.connect(mongoUri);
-mongoose.connection.on('error', function(){
-	console.log(">>>ERROR: Run Mongodb.exe ya goof!");
-});
 
 
 //Models
@@ -45,18 +35,16 @@ app.get('/admin', function(req, res){
 		return res.status(401).send('Access denied')
 	}
 	Gif.model.find({}, function(err, gifs){
-		vitreumRender({
-			page: './build/admin/bundle.dot',
-			//prerenderWith : './client/admin/admin.jsx',
-			clearRequireCache : true,
-			initialProps: {
-				url: req.originalUrl,
-				ADMIN_KEY : process.env.ADMIN_KEY,
-				gifs : gifs
-			},
-		}, function (err, page) {
-			return res.send(page)
-		});
+		render('admin', pageTemplate, {
+			url: req.originalUrl,
+			ADMIN_KEY : process.env.ADMIN_KEY,
+			gifs : gifs
+		})
+			.then(res.send)
+			.catch((err) => {
+				console.error(err);
+				res.status(500).send('Something went wrong');
+			});
 	});
 });
 
@@ -67,29 +55,38 @@ AdminApi.addRoutes(app);
 
 //Routes
 app.get('*', function (req, res) {
-
-
 	Gif.model.find({}, function(err, gifs){
 
 		if(err || !gifs) return console.log('err', err);
 
-		vitreumRender({
-			page: './build/gifbin/bundle.dot',
-			//prerenderWith : './client/gifbin/gifbin.jsx',
-			clearRequireCache : true,
-			initialProps: {
-				gifs : gifs,
-				url: req.originalUrl,
-				cookies : req.cookies
-			},
-		}, function (err, page) {
-			return res.send(page)
-		});
+		render('gifbin', pageTemplate, {
+			gifs : gifs,
+			url: req.originalUrl,
+			cookies : req.cookies
+		})
+			.then(res.send)
+			.catch((err) => {
+				console.error(err);
+				res.status(500).send('Something went wrong');
+			});
 	})
 });
 
 
-var port = process.env.PORT || 8000;
+//Mongoose
+var mongoose = require('mongoose');
+var mongoUri = process.env.MONGOLAB_URI || process.env.MONGOHQ_URL || process.env.MONGODB_URI || 'mongodb://localhost/gifbin';
+mongoose.Promise = global.Promise;
+mongoose.connect(mongoUri, { useMongoClient: true })
+	.catch((err) => {
+		throw new Error(`Could not connect to MongoDB: ${err.message}`);
+	})
+	.then(() => {
+		var port = process.env.PORT || 8000;
 
-app.listen(port);
-console.log('Listening on localhost:' + port);
+		app.listen(port);
+		console.info('Listening on', port);
+	})
+	.catch((err) => {
+		console.error('Could not start server', err);
+	});
